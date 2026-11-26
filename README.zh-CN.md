@@ -7,13 +7,15 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
+[![CI](https://github.com/xionghuazhou/game-test-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/xionghuazhou/game-test-agent/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/xionghuazhou/game-test-agent)](https://github.com/xionghuazhou/game-test-agent/releases)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 [English](README.md) | **简体中文**
 
-<img src="docs/images/demo-bug-negative-hp.png" alt="Agent 发现预埋 Bug：HP 变为负数" width="720">
+<img src="docs/images/demo.gif" alt="游戏测试 Agent 执行测试并生成负 HP Bug 报告" width="800">
 
-*分析 Agent 抓到预埋 Bug：历史扣血 5 / 11 / 9，本次骤降 78 点，HP 跌至 **-3**。*
+*真实 8 步演示：最终生成 **HP = -3** 的 high 级结构化报告，由确定性分析兜底规则捕获。*
 
 </div>
 
@@ -35,6 +37,7 @@
 | 📚 **RAG 知识库** | 历史 Bug 知识增强判定（零依赖 TF-IDF + bigram 检索开箱即用；安装 ChromaDB 后自动升级向量检索） |
 | 🎮 **双游戏模式** | `demo`：内置模拟游戏（预埋 Bug，开箱即跑）· `window`：PyAutoGUI 控制真实游戏窗口 |
 | 📡 **实时监控** | WebSocket 推送每一步执行 / 分析 / Bug 事件到控制台面板 |
+| 🧰 **确定性安全网** | 即使 LLM 提供方故障，负 HP、NaN/undefined 和点击无响应也会被报告 |
 | 🐛 **结构化 Bug 报告** | 标题 / 严重度 / 分类 / 预期 / 实际 / 判定依据 / 截图，同根因自动去重合并 |
 
 ## 🏗️ 架构
@@ -91,12 +94,13 @@ python -m uvicorn main:app --host 127.0.0.1 --port 8000
 |---|---|
 | <img src="docs/images/demo-battle-start.png" width="400"> | <img src="docs/images/demo-bug-negative-hp.png" width="400"> |
 
-端到端实测验收（12 步，demo 模式）：
+实测回归运行（8 步，demo 模式）：
 
-- ✅ 主控 Agent 自主规划出「登录主流程 → 战斗循环 → 背包与装备边界 → 设置边界」路径
-- ✅ 分析 Agent 通过**跨步骤数值对比**发现预埋 Bug：*"历史扣血 5/11/9，本次骤降 78 点且 HP=-3"*
-- ✅ RAG 命中知识库案例并写入判定依据：*"HP 出现负数属于数值越界类 Bug，根因为减血公式未做下限截断"*
-- ✅ 全程 WebSocket 实时推送，重复 Bug 自动去重合并
+- ✅ 主控 Agent 规划「登录主流程 → 战斗循环 → 背包与装备边界 → 设置边界」路径
+- ✅ 执行 Agent 通过正常战斗操作到达 **HP = -3**
+- ✅ LLM 提供方返回 HTTP 400 时，确定性兜底仍生成 **high / logic——数值越界：hp=-3**
+- ✅ 后续重复发现合并为同一 Bug，不重复刷屏
+- ✅ 4 个单元测试覆盖负 HP、NaN、无响应和正常战斗扣血
 
 ## ⚙️ 配置说明
 
@@ -158,10 +162,26 @@ backend/
 5. **Bug 去重**：同根因 Bug 自动合并证据，避免报告刷屏。
 6. **零构建前端**：单文件静态面板，FastAPI 直接托管。
 7. **轻量工作流引擎**：LangGraph 风格 StateGraph 语义，无重依赖。
+8. **确定性分析兜底**：即使服务提供方故障，明确非法状态也会生成结构化 Bug 报告。
+
+## 🧪 测试
+
+```bash
+cd backend
+python -m unittest discover -s tests -v
+```
+
+测试覆盖确定性分析兜底；CI 安装后端依赖并运行同一套测试。
+
+## 📌 限制说明
+
+- demo 模式测试内置 RPG，不代表能测试任意游戏。
+- 真实窗口模式需要可见游戏窗口和 PyAutoGUI 坐标映射。
+- LLM 分析质量取决于配置的服务提供方；规则兜底仅覆盖确定性异常（负数、NaN/undefined、无响应）。
 
 ## 🗺️ 路线图
 
-- [ ] 工作流引擎与分析 Agent 的 pytest 单元测试
+- [ ] 工作流引擎与跨步骤 LLM 分析的更多单元测试
 - [ ] 更多预埋 Bug 模式（内存泄漏、掉帧、存档损坏）
 - [ ] 演示 GIF / 在线 Demo
 - [ ] Bug 报告导出 Markdown / CSV
@@ -179,7 +199,7 @@ backend/
 本项目最初复现自一个公开的 LLM-Agent 开发课程项目，随后由作者大幅重构与扩展（见[工程亮点](#-工程亮点)）。感谢原课程提供的初始概念。与课程作者无关联。
 
 <!--
-After pushing to GitHub, uncomment and replace <your-username> to show star growth:
+After pushing to GitHub, uncomment to show star growth:
 
-[![Star History Chart](https://api.star-history.com/svg?repos=<your-username>/game-test-agent&type=Date)](https://star-history.com/#<your-username>/game-test-agent&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=xionghuazhou/game-test-agent&type=Date)](https://star-history.com/#xionghuazhou/game-test-agent&Date)
 -->

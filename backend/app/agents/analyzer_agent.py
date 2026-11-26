@@ -120,20 +120,46 @@ class AnalyzerAgent:
             return self._normalize(data)
         except Exception as e:  # noqa: BLE001
             logger.error("分析Agent LLM调用失败: %s", e)
-            # 保守兜底：明显异常信号直接用规则判定
-            is_bug = state_dict.get("last_action_result") == "no_response"
-            return {
-                "is_bug": is_bug,
-                "severity": "medium" if is_bug else "low",
-                "category": "ui",
-                "title": "点击后界面无响应（规则兜底判定）" if is_bug else "",
-                "description": f"LLM分析失败({e})，使用规则兜底" if is_bug else "",
-                "expected": "界面应响应操作",
-                "actual": "界面无响应" if is_bug else "",
-                "evidence": "规则兜底",
-                "rag_hits": rag_hits,
-                "web_search_used": suspicious,
-            }
+            # 明确非法状态必须被规则捕获，LLM 不可用也不能静默漏报
+            return self._rule_based_fallback(state_dict, str(e), rag_hits, suspicious)
+
+    @staticmethod
+    def _rule_based_fallback(
+        state_dict: dict, error: str, rag_hits: list[dict], web_search_used: bool
+    ) -> dict:
+        """在 LLM 失败时识别无响应、负数和 NaN/undefined 等确定性异常。"""
+        import math
+
+        indicators = state_dict.get("indicators") or {}
+        negative = {
+            k: v for k, v in indicators.items()
+            if isinstance(v, (int, float)) and not isinstance(v, bool) and v < 0
+        }
+        invalid = {
+            k: v for k, v in indicators.items()
+            if (isinstance(v, float) and math.isnan(v))
+            or str(v).lower() in ("nan", "none", "undefined")
+        }
+        no_response = state_dict.get("last_action_result") == "no_response"
+        is_bug = bool(negative or invalid or no_response)
+        abnormal = {**negative, **invalid}
+        actual = "、".join(f"{k}={v}" for k, v in abnormal.items())
+        if no_response:
+            actual = actual or "点击后界面无响应"
+        return {
+            "is_bug": is_bug,
+            "severity": "high" if abnormal else ("medium" if is_bug else "low"),
+            "category": "logic" if abnormal else "ui",
+            "title": (f"数值越界：{actual}（规则兜底判定）" if abnormal
+                      else ("点击后界面无响应（规则兜底判定）" if is_bug else "")),
+            "description": (f"检测到非法游戏状态：{actual}；LLM分析失败({error})，使用规则兜底"
+                            if is_bug else ""),
+            "expected": "数值应处于合法范围（HP 等不应小于 0），界面操作应有响应",
+            "actual": actual,
+            "evidence": "规则兜底：负数、NaN/undefined 或无响应属于明确异常状态",
+            "rag_hits": rag_hits,
+            "web_search_used": web_search_used,
+        }
 
     @staticmethod
     def _normalize(data: dict) -> dict:

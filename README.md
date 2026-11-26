@@ -7,13 +7,15 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
+[![CI](https://github.com/xionghuazhou/game-test-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/xionghuazhou/game-test-agent/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/xionghuazhou/game-test-agent)](https://github.com/xionghuazhou/game-test-agent/releases)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 **English** | [简体中文](README.zh-CN.md)
 
-<img src="docs/images/demo-bug-negative-hp.png" alt="Agent catches a planted bug: HP goes negative" width="720">
+<img src="docs/images/demo.gif" alt="Game Test Agent plays the demo RPG and files a negative-HP bug report" width="800">
 
-*The analyzer agent caught a planted bug: HP dropped to **-3** after a sudden 78-point damage spike (historical damage: 5 / 11 / 9).*
+*A real 8-step demo run ends with a structured high-severity report for **HP = -3**, captured by the deterministic analyzer fallback.*
 
 </div>
 
@@ -35,6 +37,7 @@ It ships with a **built-in demo RPG containing 3 planted bugs**, so you can watc
 | 📚 **RAG knowledge base** | Historical bug knowledge enhances judgments (zero-dependency TF-IDF + bigram retrieval out of the box; auto-upgrades to ChromaDB vector search when installed) |
 | 🎮 **Dual game modes** | `demo`: built-in simulated RPG with planted bugs, runs out of the box · `window`: control a real game window with PyAutoGUI |
 | 📡 **Live monitoring** | WebSocket pushes every execution / analysis / bug event to the dashboard in real time |
+| 🧰 **Deterministic safety net** | Negative HP, NaN/undefined and no-response states are reported even when the LLM provider fails |
 | 🐛 **Structured bug reports** | Title / severity / category / expected / actual / reasoning / screenshot, with automatic same-root-cause deduplication |
 
 ## 🏗️ Architecture
@@ -91,12 +94,13 @@ Open **http://127.0.0.1:8000** → create a task → click **▶ Start Test** �
 |---|---|
 | <img src="docs/images/demo-battle-start.png" width="400"> | <img src="docs/images/demo-bug-negative-hp.png" width="400"> |
 
-Verified end-to-end run (12 steps, demo mode):
+Verified regression run (8 steps, demo mode):
 
-- ✅ Master agent autonomously planned the path *"login flow → battle loop → inventory & equipment boundaries → settings boundaries"*
-- ✅ Analyzer agent detected the planted bug via **cross-step numeric comparison**: *"historical damage 5/11/9, this step dropped 78 HP and HP = -3"*
-- ✅ RAG hit a knowledge-base case and cited it in the verdict: *"negative HP is a numeric-overflow bug; root cause is a damage formula without a lower-bound clamp"*
-- ✅ Every step streamed over WebSocket; duplicate bugs were merged automatically
+- ✅ Master agent planned the path *"login flow → battle loop → inventory & equipment boundaries → settings boundaries"*
+- ✅ The executor reached **HP = -3** through normal battle actions
+- ✅ When the LLM provider returned HTTP 400, the deterministic fallback still filed **high / logic — numeric overflow: hp=-3**
+- ✅ Subsequent findings were merged into the same bug instead of creating duplicates
+- ✅ Four unit tests cover negative HP, NaN, no-response and normal battle damage
 
 ## ⚙️ Configuration
 
@@ -158,10 +162,26 @@ backend/
 5. **Bug deduplication** — same-root-cause bugs merge their evidence instead of flooding the report list.
 6. **Zero-build frontend** — a single-file static dashboard served directly by FastAPI.
 7. **Lightweight workflow engine** — LangGraph-style StateGraph semantics without the heavy dependency tree.
+8. **Deterministic analyzer fallback** — obvious illegal states become structured bug reports even during provider outages.
+
+## 🧪 Tests
+
+```bash
+cd backend
+python -m unittest discover -s tests -v
+```
+
+The suite covers the deterministic analyzer fallback; CI installs the backend dependencies and runs the same tests.
+
+## 📌 Limitations
+
+- Demo mode tests the built-in RPG, not arbitrary games.
+- Real-window mode requires a visible game window and PyAutoGUI coordinate mapping.
+- LLM analysis quality depends on the configured provider; the rule-based fallback only catches deterministic anomalies (negative values, NaN/undefined and no-response).
 
 ## 🗺️ Roadmap
 
-- [ ] pytest unit tests for the workflow engine and analyzer
+- [ ] More unit tests for the workflow engine and cross-step LLM analysis
 - [ ] More planted bug patterns (memory leaks, frame drops, save corruption)
 - [ ] Recorded demo GIF / hosted live demo
 - [ ] Export bug reports to Markdown / CSV
@@ -179,7 +199,7 @@ Issues and PRs are welcome! Please open an issue first for major changes.
 This project started as a reproduction of a public LLM-Agent development course project and was substantially reworked and extended by the author (see [Engineering Highlights](#-engineering-highlights)). Credit to the original course for the initial concept. Not affiliated with the course author.
 
 <!--
-After pushing to GitHub, uncomment and replace <your-username> to show star growth:
+After pushing to GitHub, uncomment to show star growth:
 
-[![Star History Chart](https://api.star-history.com/svg?repos=<your-username>/game-test-agent&type=Date)](https://star-history.com/#<your-username>/game-test-agent&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=xionghuazhou/game-test-agent&type=Date)](https://star-history.com/#xionghuazhou/game-test-agent&Date)
 -->

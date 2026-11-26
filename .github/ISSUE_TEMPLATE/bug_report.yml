@@ -1,0 +1,38 @@
+name: Bug report
+description: Report a reproducible problem with Game Test Agent
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      placeholder: v0.1.0 or commit hash
+    validations:
+      required: true
+  - type: input
+    id: provider
+    attributes:
+      label: LLM provider and model
+      placeholder: OpenAI-compatible endpoint + model name (no API keys!)
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include GAME_MODE, task configuration and exact steps.
+      placeholder: 1. Create a task with... 2. Start... 3. Observe...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and logs
+      description: Paste sanitized logs; remove API keys, tokens and personal data.
+    validations:
+      required: true
