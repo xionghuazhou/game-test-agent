@@ -18,4 +18,5 @@ jobs:
       - name: Backend syntax check
         run: python -m compileall -q backend
       - name: Run analyzer fallback tests
-        run: python -m unittest discover -s backend/tests -v
+        working-directory: backend
+        run: python -m unittest discover -s tests -v
