@@ -1,0 +1,13 @@
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+sqlalchemy>=2.0.25
+pydantic>=2.5.3
+httpx>=0.26.0
+python-dotenv>=1.0.0
+pillow>=10.2.0
+# 联网搜索（DuckDuckGo，无需 API Key）
+ddgs>=9.0.0
+# 真实游戏窗口模式（demo 模式无需安装）
+# pyautogui>=0.9.54
+# RAG 向量增强（可选；未安装时自动使用内置轻量检索）
+# chromadb>=0.4.22

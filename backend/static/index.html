@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>游戏测试Agent · 控制台</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --panel2: #1c2129; --border: #30363d;
+    --text: #e6edf3; --dim: #8b949e; --accent: #58a6ff; --green: #3fb950;
+    --red: #f85149; --yellow: #d29922; --purple: #bc8cff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Segoe UI", "Microsoft YaHei", sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  header { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--border); }
+  header h1 { font-size: 17px; font-weight: 600; }
+  header .sub { color: var(--dim); font-size: 12px; }
+  header .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); margin-left: auto; }
+  header .dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  main { flex: 1; display: grid; grid-template-columns: 320px 1fr 340px; gap: 12px; padding: 12px; overflow: hidden; }
+  .col { display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; }
+  .card h2 { font-size: 13px; padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--dim); font-weight: 600; letter-spacing: .05em; display:flex; align-items:center; gap:8px;}
+  .card .body { padding: 12px 14px; overflow-y: auto; flex: 1; }
+  .card .body::-webkit-scrollbar { width: 8px; }
+  .card .body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  label { font-size: 12px; color: var(--dim); display: block; margin: 8px 0 4px; }
+  input, select, textarea { width: 100%; background: var(--panel2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 8px 10px; font-size: 13px; outline: none; }
+  input:focus, textarea:focus { border-color: var(--accent); }
+  .btn { display: inline-block; background: #238636; color: #fff; border: none; border-radius: 6px; padding: 9px 14px; font-size: 13px; cursor: pointer; font-weight: 600; }
+  .btn:hover { background: #2ea043; }
+  .btn.blue { background: #1f6feb; } .btn.blue:hover { background: #388bfd; }
+  .btn.red { background: #8b1d1d; } .btn.red:hover { background: #b62324; }
+  .btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--dim); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .task-item { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
+  .task-item:hover { border-color: var(--accent); }
+  .task-item.sel { border-color: var(--accent); background: rgba(88,166,255,.06); }
+  .task-item .t-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .task-item .t-meta { font-size: 11px; color: var(--dim); display: flex; gap: 10px; }
+  .badge { font-size: 11px; padding: 1px 8px; border-radius: 10px; font-weight: 600; }
+  .badge.pending { background: #30363d; color: var(--dim); }
+  .badge.running { background: rgba(210,153,34,.15); color: var(--yellow); }
+  .badge.completed { background: rgba(63,185,80,.15); color: var(--green); }
+  .badge.failed { background: rgba(248,81,73,.15); color: var(--red); }
+  .progress { height: 6px; background: var(--panel2); border-radius: 3px; margin-top: 8px; overflow: hidden; }
+  .progress > div { height: 100%; background: var(--accent); transition: width .4s; border-radius: 3px; }
+  .log-line { font-size: 12.5px; padding: 5px 0; border-bottom: 1px dashed rgba(48,54,61,.5); line-height: 1.55; display: flex; gap: 8px; }
+  .log-line .ts { color: var(--dim); flex-shrink: 0; font-family: Consolas, monospace; font-size: 11px; padding-top: 2px; }
+  .log-line .tag { flex-shrink: 0; font-weight: 700; padding: 0 6px; border-radius: 4px; font-size: 11px; height: fit-content; }
+  .tag.plan { background: rgba(188,140,255,.15); color: var(--purple); }
+  .tag.exec { background: rgba(88,166,255,.15); color: var(--accent); }
+  .tag.analysis { background: rgba(210,153,34,.15); color: var(--yellow); }
+  .tag.bug { background: rgba(248,81,73,.2); color: var(--red); }
+  .tag.sys { background: rgba(139,148,158,.15); color: var(--dim); }
+  .log-line .ok { color: var(--green); } .log-line .bad { color: var(--red); } .log-line .warn { color: var(--yellow); }
+  .bug-item { border: 1px solid var(--border); border-left: 3px solid var(--red); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+  .bug-item .b-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .bug-item .b-desc { font-size: 12px; color: var(--dim); line-height: 1.6; margin-bottom: 6px; }
+  .bug-item .b-meta { font-size: 11px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .sev { padding: 1px 8px; border-radius: 10px; font-weight: 700; }
+  .sev.critical { background: rgba(248,81,73,.25); color: #ff7b72; }
+  .sev.high { background: rgba(248,81,73,.15); color: var(--red); }
+  .sev.medium { background: rgba(210,153,34,.15); color: var(--yellow); }
+  .sev.low { background: rgba(139,148,158,.15); color: var(--dim); }
+  .empty { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0; }
+  .stat-row { display: flex; gap: 10px; margin-bottom: 12px; }
+  .stat { flex: 1; background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; }
+  .stat .v { font-size: 22px; font-weight: 700; }
+  .stat .k { font-size: 11px; color: var(--dim); margin-top: 2px; }
+  .screenshot { max-width: 100%; border: 1px solid var(--border); border-radius: 6px; margin-top: 6px; }
+  .evidence { font-size: 11px; color: var(--purple); background: rgba(188,140,255,.08); padding: 6px 8px; border-radius: 6px; margin-top: 6px; line-height: 1.5; }
+  #wsUrl { font-size: 11px; color: var(--dim); font-family: Consolas, monospace; }
+  .row2 { display: flex; gap: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎮 游戏测试Agent · 控制台</h1>
+  <span class="sub" id="health">连接中…</span>
+  <span class="dot" id="wsDot"></span>
+  <span id="wsUrl">ws 未连接</span>
+</header>
+<main>
+  <!-- 左：任务 -->
+  <div class="col">
+    <div class="card">
+      <h2>➕ 创建测试任务</h2>
+      <div class="body">
+        <label>任务名称</label>
+        <input id="tName" placeholder="例如：主流程+边界测试 v1" value="全流程回归测试 v1">
+        <label>游戏名称</label>
+        <input id="tGame" placeholder="DemoGame 模拟RPG">
+        <label>游戏描述（可选，帮助Agent规划）</label>
+        <textarea id="tDesc" rows="2" placeholder="一款RPG游戏，包含登录、主菜单、战斗、背包、设置等场景"></textarea>
+        <div class="row2">
+          <div style="flex:1"><label>游戏模式</label>
+            <select id="tMode"><option value="demo">demo 模拟游戏</option><option value="window">window 真实窗口</option></select>
+          </div>
+          <div style="flex:1"><label>最大步数</label>
+            <input id="tSteps" type="number" value="14" min="4" max="40">
+          </div>
+        </div>
+        <div style="margin-top:12px"><button class="btn blue" style="width:100%" onclick="createTask()">创建任务</button></div>
+      </div>
+    </div>
+    <div class="card" style="flex:1">
+      <h2>📋 任务列表 <button class="btn ghost" style="margin-left:auto;padding:2px 10px;font-size:11px" onclick="loadTasks()">刷新</button></h2>
+      <div class="body" id="taskList"><div class="empty">暂无任务</div></div>
+    </div>
+  </div>
+
+  <!-- 中：执行流 -->
+  <div class="col">
+    <div class="card" style="flex:1">
+      <h2>🖥️ 执行监控 <span id="curTask" style="color:var(--accent)"></span></h2>
+      <div class="body" id="logBox"><div class="empty">选择或创建任务并点击「启动测试」</div></div>
+    </div>
+  </div>
+
+  <!-- 右：Bug与详情 -->
+  <div class="col">
+    <div class="card">
+      <h2>📊 统计</h2>
+      <div class="body">
+        <div class="stat-row">
+          <div class="stat"><div class="v" id="sSteps">0</div><div class="k">执行步数</div></div>
+          <div class="stat"><div class="v" id="sBugs" style="color:var(--red)">0</div><div class="k">发现Bug</div></div>
+          <div class="stat"><div class="v" id="sSearch">0</div><div class="k">联网搜索</div></div>
+        </div>
+        <div id="shotBox"></div>
+      </div>
+    </div>
+    <div class="card" style="flex:1">
+      <h2>🐛 Bug 列表 <button class="btn ghost" style="margin-left:auto;padding:2px 10px;font-size:11px" onclick="loadBugs()">刷新</button></h2>
+      <div class="body" id="bugList"><div class="empty">暂无Bug</div></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const API = location.origin;
+let ws = null, curTaskId = null, statSearch = 0, statSteps = 0, statBugs = 0;
+
+// ---------- 健康检查 ----------
+async function checkHealth() {
+  try {
+    const r = await fetch(API + '/api/health');
+    const d = await r.json();
+    document.getElementById('health').textContent = `模型: ${d.llm_model} | 模式: ${d.game_mode} | 联网: ${d.web_search ? '开' : '关'}`;
+  } catch { document.getElementById('health').textContent = '后端未连接'; }
+}
+
+// ---------- 任务 ----------
+async function loadTasks() {
+  const r = await fetch(API + '/api/tasks');
+  const list = await r.json();
+  const box = document.getElementById('taskList');
+  if (!list.length) { box.innerHTML = '<div class="empty">暂无任务</div>'; return; }
+  box.innerHTML = list.map(t => `
+    <div class="task-item ${t.id === curTaskId ? 'sel' : ''}" onclick="selectTask(${t.id})">
+      <div class="t-name">${esc(t.name)} <span class="badge ${t.status}">${statusText(t.status)}</span></div>
+      <div class="t-meta"><span>#${t.id}</span><span>${t.completed_steps}/${t.total_steps} 步</span><span>🐛 ${t.bug_count}</span><span>${(t.created_at||'').slice(5,16)}</span></div>
+      <div class="progress"><div style="width:${t.total_steps ? Math.round(t.completed_steps/t.total_steps*100) : 0}%"></div></div>
+    </div>`).join('');
+}
+function statusText(s) { return {pending:'待运行',running:'运行中',completed:'已完成',failed:'失败'}[s] || s; }
+
+async function createTask() {
+  const name = document.getElementById('tName').value.trim();
+  if (!name) return alert('请输入任务名称');
+  const body = {
+    name,
+    config: {
+      game_name: document.getElementById('tGame').value.trim(),
+      game_desc: document.getElementById('tDesc').value.trim(),
+      mode: document.getElementById('tMode').value,
+      max_steps: parseInt(document.getElementById('tSteps').value || '14'),
+    }
+  };
+  const r = await fetch(API + '/api/tasks', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const t = await r.json();
+  await loadTasks();
+  selectTask(t.id);
+}
+
+async function selectTask(id) {
+  curTaskId = id;
+  statSearch = statSteps = statBugs = 0;
+  document.getElementById('logBox').innerHTML = '';
+  document.getElementById('sSteps').textContent = '0';
+  document.getElementById('sBugs').textContent = '0';
+  document.getElementById('sSearch').textContent = '0';
+  document.getElementById('shotBox').innerHTML = '';
+  document.getElementById('curTask').textContent = '#' + id;
+  connectWS(id);
+  await loadTasks();
+  await loadBugs();
+  // 回放历史日志
+  const r = await fetch(`${API}/api/tasks/${id}/logs`);
+  const logs = await r.json();
+  for (const l of logs) addLog(l.phase === 'plan' ? 'plan' : (l.result === 'bug_found' ? 'bug' : 'exec'),
+      `${l.action || ''} ${l.result ? '→ ' + l.result : ''}`, l.result);
+}
+
+async function startTask() {
+  if (!curTaskId) return alert('请先选择任务');
+  await fetch(`${API}/api/tasks/${curTaskId}/start`, { method: 'POST' });
+  addLog('sys', '任务已启动');
+}
+
+async function deleteTask() {
+  if (!curTaskId) return;
+  if (!confirm('确认删除该任务及其日志、Bug？')) return;
+  await fetch(`${API}/api/tasks/${curTaskId}`, { method: 'DELETE' });
+  curTaskId = null;
+  document.getElementById('curTask').textContent = '';
+  document.getElementById('logBox').innerHTML = '<div class="empty">选择或创建任务并点击「启动测试」</div>';
+  await loadTasks(); await loadBugs();
+}
+
+// ---------- WebSocket ----------
+function connectWS(taskId) {
+  if (ws) { try { ws.close(); } catch {} }
+  const url = API.replace('http', 'ws') + `/ws/${taskId}`;
+  document.getElementById('wsUrl').textContent = url;
+  ws = new WebSocket(url);
+  ws.onopen = () => document.getElementById('wsDot').classList.add('on');
+  ws.onclose = () => document.getElementById('wsDot').classList.remove('on');
+  ws.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    if (d.type === 'plan') {
+      const total = d.plan.scenarios.reduce((a, s) => a + s.steps.length, 0);
+      addLog('plan', `规划完成：${d.plan.scenarios.length} 个场景 / ${total} 步 — ${d.plan.scenarios.map(s => s.name).join('、')}`);
+    } else if (d.type === 'phase') {
+      if (d.phase === 'analyze') addLog('analysis', d.message);
+      else if (d.phase === 'execute') addLog('exec', `步骤 ${d.step}: ${d.action}`);
+    } else if (d.type === 'step') {
+      statSteps = d.step;
+      document.getElementById('sSteps').textContent = d.step;
+      const resCls = d.result === 'no_response' ? 'bad' : (d.result === 'error' ? 'bad' : 'ok');
+      addLog('exec', `　└ ${d.scene} | ${d.result} | ${d.screen_text}`, resCls);
+      if (d.screenshot) {
+        const fname = d.screenshot.replace(/\\/g, '/').split('/').pop();
+        document.getElementById('shotBox').innerHTML =
+          `<img class="screenshot" src="${API}/data/screenshots/${encodeURIComponent(fname)}" onerror="this.style.display='none'">`;
+      }
+    } else if (d.type === 'bug') {
+      statBugs++;
+      document.getElementById('sBugs').textContent = statBugs;
+      const b = d.bug;
+      addLog('bug', `发现 ${b.severity.toUpperCase()} Bug: ${b.title}`);
+      loadBugs();
+    } else if (d.type === 'done') {
+      addLog(d.status === 'completed' ? 'sys' : 'bug', d.status === 'completed'
+        ? `✅ 测试完成：共 ${d.total} 步，发现 ${d.bugs} 个 Bug`
+        : `❌ 任务失败: ${d.error || ''}`, d.status === 'completed' ? 'ok' : 'bad');
+      loadTasks();
+    } else if (d.type === 'ping') {
+      // ignore
+    }
+  };
+}
+
+// ---------- Bug ----------
+async function loadBugs() {
+  const r = await fetch(API + '/api/bugs' + (curTaskId ? `?task_id=${curTaskId}` : ''));
+  const list = await r.json();
+  const box = document.getElementById('bugList');
+  if (!list.length) { box.innerHTML = '<div class="empty">暂无Bug</div>'; return; }
+  box.innerHTML = list.map(b => `
+    <div class="bug-item">
+      <div class="b-title">#${b.id} ${esc(b.title)}</div>
+      <div class="b-meta"><span class="sev ${b.severity}">${b.severity}</span><span class="badge">${b.category || '-'}</span><span style="color:var(--dim)">任务#${b.task_id}</span><span style="color:var(--dim)">${(b.detected_at||'').slice(5,16)}</span></div>
+      <div class="b-desc">${esc(b.description || '')}</div>
+      ${b.expected_behavior ? `<div class="b-desc">预期：${esc(b.expected_behavior)}<br>实际：${esc(b.actual_behavior || '')}</div>` : ''}
+      ${b.evidence ? `<div class="evidence">🔎 判定依据：${esc(b.evidence)}</div>` : ''}
+      ${b.steps ? `<div class="b-desc" style="margin-top:6px">路径：${esc(b.steps)}</div>` : ''}
+    </div>`).join('');
+}
+
+// ---------- log ----------
+function addLog(tag, text, cls) {
+  const box = document.getElementById('logBox');
+  if (box.querySelector('.empty')) box.innerHTML = '';
+  const ts = new Date().toTimeString().slice(0, 8);
+  const div = document.createElement('div');
+  div.className = 'log-line';
+  div.innerHTML = `<span class="ts">${ts}</span><span class="tag ${tag}">${tag.toUpperCase()}</span><span class="${cls || ''}">${esc(text)}</span>`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+// 更新统计里的联网搜索次数：从 bug evidence 粗略统计
+const origLoadBugs = loadBugs;
+loadBugs = async function() {
+  await origLoadBugs();
+  const r = await fetch(API + '/api/bugs' + (curTaskId ? `?task_id=${curTaskId}` : ''));
+  const list = await r.json();
+  statSearch = list.filter(b => (b.evidence || '').includes('《')).length;
+  document.getElementById('sSearch').textContent = statSearch;
+};
+
+// 启动
+checkHealth();
+loadTasks();
+loadBugs();
+setInterval(checkHealth, 15000);
+setInterval(() => { if (curTaskId) loadTasks(); }, 5000);
+</script>
+
+<div style="position:fixed;bottom:14px;right:14px;display:flex;gap:8px">
+  <button class="btn" id="btnStart" onclick="startTask()">▶ 启动测试</button>
+  <button class="btn red" onclick="deleteTask()">删除任务</button>
+</div>
+</body>
+</html>
